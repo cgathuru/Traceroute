@@ -2,6 +2,8 @@ import platform
 import sys
 import subprocess
 import re
+import csv
+import time
 
 __author__ = 'Charles'
 
@@ -24,17 +26,27 @@ def main():
     hops_p = "\d[\s]{2,}"
     i = 0
     hops = 0
+    ip_list = list()
     for line in lines:
         if line:
             print("Line {}".format(i) + " " + line)
-            ip = [match[0] for match in re.findall(ip_p, line)]
-            times = [match[0] for match in re.findall(time_pattern, line)]
-            hops = hops + 1 if len([match[0] for match in re.findall(hops_p, line)]) > 0 else hops
-            print('Found {} ip matches'.format(len(ip)))
-            print('Found {} time matches'.format(len(times)))
+            if len([match[0] for match in re.findall(hops_p, line)]) > 0:
+                ip = [match[0] for match in re.findall(ip_p, line)]
+                ip_list.append(ip)
+                times = [match[0] for match in re.findall(time_pattern, line)]
+                hops += 1
+                print('Found {} ip matches'.format(len(ip)))
+                print('Found {} time matches'.format(len(times)))
         i += 1
 
     print("Total hops: {}".format(hops))
+    print("Ips are:")
+    print(ip_list)
+
+    with open(domain + '.csv', 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file, delimiter=',')
+        writer.writerow(['Route Number', 'Date', 'Time', 'Destination', 'Route', 'Route TTL', 'Num Hops'])
+        writer.writerow(['1', time.strftime("%x"), time.strftime("%X"), domain, ip_list, 'xxx', hops])
 
 
 if __name__ == '__main__':
