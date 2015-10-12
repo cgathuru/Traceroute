@@ -4,6 +4,7 @@ import subprocess
 import re
 import csv
 import time
+import statistics
 
 __author__ = 'Charles'
 
@@ -27,13 +28,17 @@ def main():
     i = 0
     hops = 0
     ip_list = list()
+    avg_ttl = list()
     for line in lines:
         if line:
             print("Line {}".format(i) + " " + line)
             if len([match[0] for match in re.findall(hops_p, line)]) > 0:
                 ip = [match[0] for match in re.findall(ip_p, line)]
-                ip_list.append(ip)
-                times = [match[0] for match in re.findall(time_pattern, line)]
+                # ip_list.append(str(ip).strip('[]').strip('\'\''))
+                ip_list.append(ip[0])
+                print("IP is " + str(ip[0]))
+                times = re.findall(time_pattern, line)
+                avg_ttl.append(times[0].rstrip('ms'))
                 hops += 1
                 print('Found {} ip matches'.format(len(ip)))
                 print('Found {} time matches'.format(len(times)))
@@ -42,11 +47,16 @@ def main():
     print("Total hops: {}".format(hops))
     print("Ips are:")
     print(ip_list)
+    print("Times are:")
+    # avg_ttl = list(map(int, avg_ttl))
 
     with open(domain + '.csv', 'w', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerow(['Route Number', 'Date', 'Time', 'Destination', 'Route', 'Route TTL', 'Num Hops'])
-        writer.writerow(['1', time.strftime("%x"), time.strftime("%X"), domain, ip_list, 'xxx', hops])
+        ips = ', '.join(ip_list)
+        print(ips)
+        writer.writerow(['1', time.strftime("%x"), time.strftime("%X"), domain, ', '.join(ip_list),
+                         ', '.join(avg_ttl), hops])
 
 
 if __name__ == '__main__':
