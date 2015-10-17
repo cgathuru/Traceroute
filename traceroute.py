@@ -103,10 +103,13 @@ def get_traceroute_output(command, domain):
             if len([match[0] for match in re.findall(hops_p, line)]) > 0:
                 ip = [match[0] for match in re.findall(ip_p, line)]
                 # ip_list.append(str(ip).strip('[]').strip('\'\''))
-                ip_list.append(ip[0])
-                print("IP is " + str(ip[0]))
+                if len(ip) > 0 and ip != '*':
+                    print('Trying to append {}'.format(ip[0]))
+                    ip_list.append(ip[0])
+                    print("IP is " + str(ip[0]))
                 times = re.findall(time_pattern, line)
-                avg_ttl.append(times[0].rstrip('ms'))
+                if len(times) > 0:
+                    avg_ttl.append(times[0].rstrip('ms'))
                 hops += 1
                 print('Found {} ip matches'.format(len(ip)))
                 print('Found {} time matches'.format(len(times)))
