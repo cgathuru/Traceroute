@@ -1,108 +1,100 @@
 import platform
-import sys
 import subprocess
 import re
 import csv
 import time
-#import statistics
+import argparse
+import threading
+from threading import Thread
 
 __author__ = 'Charles'
 
+traces = list()
+lock = threading.Lock()
+
 
 def main():
-    domain = sys.argv[1] if len(sys.argv) > 1 else "www.google.ca"
-    frequency = sys.argv[2] if len(sys.argv) > 2 else 1
-    frequency = int(frequency)
-    frequency_unit = sys.argv[3] if len(sys.argv) > 3 else "s"
-    duration = sys.argv[4] if len(sys.argv) > 4 else 1
-    duration = int(duration)
-    duration_unit = sys.argv[5] if len(sys.argv) > 5 else "m"
+    parser = argparse.ArgumentParser(
+        description='Runs traceroute command on a given domain name for a given frequency')
+    parser.add_argument('--domain', type=str, default='www.google.ca')
+    frequency = parser.add_mutually_exclusive_group()
+    frequency.add_argument('--hr', action='store_true')
+    frequency.add_argument('--day', action='store_true')
+    frequency.add_argument('--min', action='store_true')
+    parser.add_argument('--rep', type=int, default=1)
+    parser.set_defaults(frequency='minute')
+
+    args = parser.parse_args()
+
+    print("Running traceoute.....")
+    print("Destination " + args.domain + " Frequency " + args.frequency + " repeating " + str(args.rep))
+    domain = args.domain
     command = 'tracert'
     if platform.system() != 'Windows':
         command = 'traceroute'
 
     print('command is ' + command)
 
-    #get the time 
-    time_to_sleep = 0 
-    if frequency_unit == "s":
-        time_to_sleep = frequency 
-    elif frequency_unit == "m":
-        time_to_sleep = frequency * 60
-    elif frequency_unit == "h":
-        time_to_sleep = frequency * 3600
-    elif frequency_unit == "d": 
-        time_to_sleep = frequency * 3600 * 24
+    thread = Thread(target=get_trace_route, args=(command, domain))
+    thread.start()
+    thread.join()
 
-    iteration_count = 0 
-    if duration_unit == "s":
-        if frequency_unit == "s":
-            iteration_count = duration / frequency
-        else:
-            print("Bad unit combination\n")
-            return 1
-    elif duration_unit == "m":
-        if frequency_unit == "s":
-            iteration_count = 60 * duration / frequency
-        elif frequency_unit == "m":
-            iteration_count = duration / frequency
-        else:
-            print("Bad unit combination \n")
-            return 1
-    elif duration_unit == "h":
-        if frequency_unit == "s":
-            iteration_count = 3600 * duration / frequency
-        elif frequency_unit == "m":
-            iteration_count = 60 * duration / frequency
-        elif frequency_unit == "h":
-            iteration_count = duration/frequency
-        else:
-            print("Bad unit combination \n")
-            return 1
-    elif duration_unit == "d":
-        if frequency_unit == "s":
-            iteration_count = 24*3600 * duration / frequency
-        elif frequency_unit == "m":
-            iteration_count = 24* 60 * duration / frequency
-        elif frequency_unit == "h":
-            iteration_count = 24* duration/frequency
-        elif frequency_unit == "d":
-            iteration_count = duration/frequency
-        else:
-            print("Bad unit combination \n")
-            return 1
-    else: 
-        print("bad input \n")
-        return 1
+    print(traces)
 
-    print ("Traceroute will run every " + str(time_to_sleep) +" seconds " + str(iteration_count) + " times \n")
-
-    for x in range (0, iteration_count):
-        get_traceroute_output(command, domain)
-        time.sleep(time_to_sleep)
+    return write_data_to_csv(domain)
 
 
+def get_trace_route(command, domain):
+    content = {}
+    output = subprocess.check_output([command, domain])
+    decode_out = output.decode("utf-8")
+    lines = decode_out.split('\n')
+    ip_p = "((([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])[ (\[]?(\.|dot)[ )\]]?){3}([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5]))"
+    time_pattern = "\d+\sms"
+    hops_p = "\d[\s]{2,}"
+    hops = 0
+    ip_list = list()
+    avg_ttl = list()
+    for line in lines:
+        if line:
+            if len([match[0] for match in re.findall(hops_p, line)]) > 0:
+                ip = [match[0] for match in re.findall(ip_p, line)]
+                if len(ip) > 0 and ip != '*':
+                    ip_list.append(ip[0])
+                times = re.findall(time_pattern, line)
+                if len(times) > 0:
+                    avg_ttl.append(times[0].rstrip('ms'))
+                hops += 1
+    print("Total hops: {}".format(hops))
+    print("Ips are:")
+    print(ip_list)
+    print("Times are:")
+    # avg_ttl = list(map(int, avg_ttl))
+    content['ips'] = ip_list
+    content['times'] = avg_ttl
+    content['hops'] = hops
+    content['unresponsive'] = hops - len(avg_ttl)
+    lock.acquire()
+    traces.append(content)
+    lock.release()
+    return
 
 
-def get_traceroute_output(command, host):
+def write_data_to_csv(domain: str):
+    with open(domain + '.csv', 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file, delimiter=',')
+        writer.writerow(['Route Number', 'Date', 'Time', 'Destination', 'Route', 'Route TTL', 'Num Hops',
+                         'Unresponsive'])
+        for route_no, route in enumerate(traces, start=1):
+            avg_ttl = route.get('times')
+            ip_list = route.get('ips')
+            hops = route.get('hops')
+            ips = ', '.join(ip_list)
 
-	with open("results.txt", "a") as output:
-		print ("Tracing", host)
-
-		trace = subprocess.Popen([command, "-w", "100", host], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-		while True:
-		    hop = trace.stdout.readline()
-
-		    if not hop: break
-
-		    print '-->', hop.strip()
-		    output.write(hop)
-
-		# When you pipe stdout, the doc recommends that you use .communicate()
-		# instead of wait()
-		# see: http://docs.python.org/2/library/subprocess.html#subprocess.Popen.wait
-		trace.communicate()
+            print(ips)
+            writer.writerow([route_no, time.strftime("%x"), time.strftime("%X"), domain, ', '.join(ip_list),
+                            ', '.join(avg_ttl), hops, route.get('unresponsive')])
+    return
 
 
 if __name__ == '__main__':
