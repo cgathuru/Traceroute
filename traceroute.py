@@ -16,21 +16,36 @@ lock = threading.Lock()
 def main():
     parser = argparse.ArgumentParser(
         description='Runs traceroute command on a given domain name for a given frequency')
-    parser.add_argument('--domain', type=str, default='www.google.ca')
+    parser.add_argument('--domains', default='www.google.ca', nargs='+', dest='domains')
     frequency = parser.add_mutually_exclusive_group()
-    frequency.add_argument('--hr', action='store_true')
-    frequency.add_argument('--day', action='store_true')
-    frequency.add_argument('--min', action='store_true')
+    frequency.add_argument('--hr', action='store_true', dest='hour')
+    frequency.add_argument('--day', action='store_true', dest="day")
+    frequency.add_argument('--min', action='store_true', dest='minute')
     parser.add_argument('--rep', type=int, default=1)
     parser.set_defaults(frequency='minute')
 
-    # TODO Modify domain command line option to task a list
-
     args = parser.parse_args()
 
+    if args.day:
+        seconds = 24*60*60
+    elif args.hour:
+        seconds = 60*60
+    else:
+        seconds = 1
+
+    seconds = seconds * args.rep
+
+    print("Repeating every {} seconds".format(seconds))
     print("Running traceoute.....")
-    print("Destination " + args.domain + " Frequency " + args.frequency + " repeating " + str(args.rep))
-    domain = args.domain
+    print("Destinations " + str(args.domains) + " Frequency " + args.frequency + " repeating " + str(args.rep))
+    domains = list()
+    if type(args.domains) is not list:
+        domains.append(str(args.domains))
+    else:
+        domains = args.domains
+    for x in domains:
+        print(x)
+    domain = domains[0]
     command = 'tracert'
     if platform.system() != 'Windows':
         command = 'traceroute'
@@ -92,9 +107,7 @@ def write_data_to_csv(domain: str):
             avg_ttl = route.get('times')
             ip_list = route.get('ips')
             hops = route.get('hops')
-            ips = ', '.join(ip_list)
 
-            print(ips)
             writer.writerow([route_no, time.strftime("%x"), time.strftime("%X"), domain, ', '.join(ip_list),
                             ', '.join(avg_ttl), hops, route.get('unresponsive')])
     return
