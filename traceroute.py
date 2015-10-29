@@ -24,6 +24,8 @@ def main():
     parser.add_argument('--rep', type=int, default=1)
     parser.set_defaults(frequency='minute')
 
+    # TODO Modify domain command line option to task a list
+
     args = parser.parse_args()
 
     print("Running traceoute.....")
@@ -35,6 +37,7 @@ def main():
 
     print('command is ' + command)
 
+    # TODO Create a thread pool to run commands
     thread = Thread(target=get_trace_route, args=(command, domain))
     thread.start()
     thread.join()
