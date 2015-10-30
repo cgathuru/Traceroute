@@ -45,7 +45,7 @@ def main():
         domains = args.domains
     for x in domains:
         print(x)
-    domain = domains[0]
+    file_name = "results_" + time.strftime("%d%m_%H%M", time.localtime())
     command = 'tracert'
     if platform.system() != 'Windows':
         command = 'traceroute'
@@ -61,7 +61,7 @@ def main():
 
     print(traces)
 
-    return write_data_to_csv(domain)
+    return write_data_to_csv(file_name)
 
 
 def get_trace_route(command, domain):
