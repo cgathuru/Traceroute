@@ -9,11 +9,17 @@ download and save the python file
 make the python file excecutable by :
 chmod + x traceroute.py 
 takes for command line parameters 
-1- frequency which can be any integer 
-2- frequency unit which can be any of s, m , h , d standing for second, minute, hour, day respectively 
-3- duration which can be any integer 
-4- duration unit which has the same options as the frequency unit
 
-example usage: 
-python traceroute.py 1 m 10 d 
-This will run traceroute every minute for 10 days 
+- --domains Specify a domain or a list orf domains
+- --day &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Specify that you want traceroute to occur every day
+- --hr &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Specify that you want traceroute to occur every hour
+- --min &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Specify that you want traceroute to occur every min
+- --rep &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Number of times to run traceroute at the given frequency
+
+**Note**: --day, --hr and --min are mutually exclusive. Default values are rep=1 and --min
+
+Example usage: <br>
+
+    python traceroute.py --min --rep 1 www.google.ca
+
+This will run traceroute once on <a href="https://www.google.ca">www.google.ca</a>.
