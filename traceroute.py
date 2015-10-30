@@ -5,7 +5,7 @@ import csv
 import time
 import argparse
 import threading
-from threading import Thread
+import concurrent.futures
 
 __author__ = 'Charles'
 
@@ -52,10 +52,12 @@ def main():
 
     print('command is ' + command)
 
-    # TODO Create a thread pool to run commands
-    thread = Thread(target=get_trace_route, args=(command, domain))
-    thread.start()
-    thread.join()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=(5*len(domains)*2)) as executor:
+        for _ in range(0, args.rep):
+            for domain in domains:
+                executor.submit(get_trace_route, command, domain)
+            time.sleep(seconds)
+        executor.shutdown(wait=True)
 
     print(traces)
 
@@ -63,7 +65,8 @@ def main():
 
 
 def get_trace_route(command, domain):
-    content = {}
+    content = dict()
+    content['domain'] = domain
     output = subprocess.check_output([command, domain])
     decode_out = output.decode("utf-8")
     lines = decode_out.split('\n')
@@ -98,8 +101,8 @@ def get_trace_route(command, domain):
     return
 
 
-def write_data_to_csv(domain: str):
-    with open(domain + '.csv', 'w', newline='') as csv_file:
+def write_data_to_csv(file_name: str):
+    with open(file_name + '.csv', 'w', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerow(['Route Number', 'Date', 'Time', 'Destination', 'Route', 'Route TTL', 'Num Hops',
                          'Unresponsive'])
@@ -107,6 +110,7 @@ def write_data_to_csv(domain: str):
             avg_ttl = route.get('times')
             ip_list = route.get('ips')
             hops = route.get('hops')
+            domain = route.get('domain')
 
             writer.writerow([route_no, time.strftime("%x"), time.strftime("%X"), domain, ', '.join(ip_list),
                             ', '.join(avg_ttl), hops, route.get('unresponsive')])
