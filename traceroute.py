@@ -31,9 +31,7 @@ def main():
     elif args.hour:
         seconds = 60*60
     else:
-        seconds = 1
-
-    seconds = seconds * args.rep
+        seconds = 60
 
     print("Repeating every {} seconds".format(seconds))
     print("Running traceoute.....")
