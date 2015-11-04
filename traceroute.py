@@ -89,6 +89,8 @@ def get_ping_time(domain):
 def get_trace_route(command, domain):
     content = dict()
     content['domain'] = domain
+    content['date'] = time.strftime("%x")
+    content['time'] = time.strftime("%X")
     output = subprocess.check_output([command, domain])
     decode_out = output.decode("utf-8")
     lines = decode_out.split('\n')
@@ -113,8 +115,7 @@ def get_trace_route(command, domain):
     content['times'] = avg_ttl
     content['hops'] = hops
     content['unresponsive'] = hops - len(avg_ttl)
-    content['date'] = time.strftime("%x")
-    content['time'] = time.strftime("%X")
+    content['end_time'] = time.strftime("%X")
     lock.acquire()
     traces.append(content)
     lock.release()
@@ -124,7 +125,7 @@ def get_trace_route(command, domain):
 def write_data_to_csv(file_name: str):
     with open(file_name + '.csv', 'w', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
-        writer.writerow(['Route Number', 'Date', 'Time', 'Destination', 'Route', 'Route TTL', 'Num Hops',
+        writer.writerow(['Route Number', 'Date', 'Time', 'End Time', 'Destination', 'Route', 'Route TTL', 'Num Hops',
                          'Unresponsive', 'Average RTT'])
         for route_no, route in enumerate(traces, start=1):
             route_ttls = route.get('times')
@@ -135,8 +136,8 @@ def write_data_to_csv(file_name: str):
                 rtts.insert(route_no-1, -1)  # Ping probably failed
             avg_rtt = rtts[route_no-1]
 
-            writer.writerow([route_no, route.get('date'), route.get('time'), domain, ', '.join(ip_list),
-                            ', '.join(route_ttls), hops, route.get('unresponsive'), avg_rtt])
+            writer.writerow([route_no, route.get('date'), route.get('time'), route.get('end_time'), domain,
+                             ', '.join(ip_list), ', '.join(route_ttls), hops, route.get('unresponsive'), avg_rtt])
     return
 
 
