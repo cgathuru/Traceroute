@@ -140,6 +140,8 @@ def write_data_to_csv(file_name: str):
             ip_list = route.get('ips')
             hops = route.get('hops')
             domain = route.get('domain')
+            if (hops == 30) and (len(rtts) < len(traces)):
+                rtts.insert(route_no-1, -1)  # Ping probably failed
             avg_rtt = rtts[route_no-1]
 
             writer.writerow([route_no, route.get('date'), route.get('time'), domain, ', '.join(ip_list),
