@@ -6,10 +6,12 @@ import time
 import argparse
 import threading
 import concurrent.futures
+from  statistics import mean
 
 __author__ = 'Charles'
 
 traces = list()
+rtts = list()
 lock = threading.Lock()
 
 
@@ -54,12 +56,39 @@ def main():
         for _ in range(0, args.rep):
             for domain in domains:
                 executor.submit(get_trace_route, command, domain)
+                executor.submit(get_ping_time, domain)
             time.sleep(seconds)
         executor.shutdown(wait=True)
 
     print(traces)
 
+    print("Traces length {}".format(len(traces)))
+    print("RTTs length {}".format(len(rtts)))
+
     return write_data_to_csv(file_name)
+
+
+def get_ping_time(domain):
+    num_pkts = 3
+    command = 'ping -n {} {}'.format(num_pkts, domain)
+    if platform.system() != 'Windows':
+        command = 'ping -c {} {}'.format(num_pkts, domain)
+    output = subprocess.check_output(command)
+    decode_out = output.decode("utf-8")
+    lines = decode_out.split('\n')
+    ttl = -1
+    times = []
+    for line in lines:
+        matches = re.match('.*time=([0-9]+)ms.*', line)
+        if matches:
+            times.append(matches.group(1))
+    if times:
+        ttl = mean(list(map(int, times)))
+    ttl = float(format(ttl, '.2f'))
+    lock.acquire()
+    rtts.append(ttl)
+    lock.release()
+    print("Average ttl:  {}".format(ttl))
 
 
 def get_trace_route(command, domain):
@@ -93,6 +122,8 @@ def get_trace_route(command, domain):
     content['times'] = avg_ttl
     content['hops'] = hops
     content['unresponsive'] = hops - len(avg_ttl)
+    content['date'] = time.strftime("%x")
+    content['time'] = time.strftime("%X")
     lock.acquire()
     traces.append(content)
     lock.release()
@@ -103,15 +134,16 @@ def write_data_to_csv(file_name: str):
     with open(file_name + '.csv', 'w', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         writer.writerow(['Route Number', 'Date', 'Time', 'Destination', 'Route', 'Route TTL', 'Num Hops',
-                         'Unresponsive'])
+                         'Unresponsive', 'Average RTT'])
         for route_no, route in enumerate(traces, start=1):
-            avg_ttl = route.get('times')
+            route_ttls = route.get('times')
             ip_list = route.get('ips')
             hops = route.get('hops')
             domain = route.get('domain')
+            avg_rtt = rtts[route_no-1]
 
-            writer.writerow([route_no, time.strftime("%x"), time.strftime("%X"), domain, ', '.join(ip_list),
-                            ', '.join(avg_ttl), hops, route.get('unresponsive')])
+            writer.writerow([route_no, route.get('date'), route.get('time'), domain, ', '.join(ip_list),
+                            ', '.join(route_ttls), hops, route.get('unresponsive'), avg_rtt])
     return
 
 
