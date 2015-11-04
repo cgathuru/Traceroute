@@ -6,7 +6,7 @@ import time
 import argparse
 import threading
 import concurrent.futures
-from  statistics import mean
+from statistics import mean
 
 __author__ = 'Charles'
 
@@ -60,11 +60,6 @@ def main():
             time.sleep(seconds)
         executor.shutdown(wait=True)
 
-    print(traces)
-
-    print("Traces length {}".format(len(traces)))
-    print("RTTs length {}".format(len(rtts)))
-
     return write_data_to_csv(file_name)
 
 
@@ -113,11 +108,7 @@ def get_trace_route(command, domain):
                 if len(times) > 0:
                     avg_ttl.append(times[0].rstrip('ms'))
                 hops += 1
-    print("Total hops: {}".format(hops))
-    print("Ips are:")
-    print(ip_list)
-    print("Times are:")
-    # avg_ttl = list(map(int, avg_ttl))
+
     content['ips'] = ip_list
     content['times'] = avg_ttl
     content['hops'] = hops
