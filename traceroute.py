@@ -68,22 +68,22 @@ def get_ping_time(domain):
     command = 'ping -n {} {}'.format(num_pkts, domain)
     if platform.system() != 'Windows':
         command = 'ping -c {} {}'.format(num_pkts, domain)
-    output = subprocess.check_output(command)
+    output = subprocess.check_output(command, shell=True)
     decode_out = output.decode("utf-8")
     lines = decode_out.split('\n')
     ttl = -1
     times = []
     for line in lines:
-        matches = re.match('.*time=([0-9]+)ms.*', line)
+        matches = re.search('time=([0-9.]+)\s?ms', line)
         if matches:
             times.append(matches.group(1))
     if times:
-        ttl = mean(list(map(int, times)))
+        ttl = mean(list(map(float, times)))
     ttl = float(format(ttl, '.2f'))
     lock.acquire()
     rtts.append(ttl)
     lock.release()
-    print("Average ttl:  {}".format(ttl))
+    print("Average rtt:  {}".format(ttl))
 
 
 def get_trace_route(command, domain):
@@ -132,7 +132,7 @@ def write_data_to_csv(file_name: str):
             ip_list = route.get('ips')
             hops = route.get('hops')
             domain = route.get('domain')
-            if (hops == 30) and (len(rtts) < len(traces)):
+            if len(rtts) < len(traces):
                 rtts.insert(route_no-1, -1)  # Ping probably failed
             avg_rtt = rtts[route_no-1]
 
