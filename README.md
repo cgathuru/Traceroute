@@ -10,7 +10,7 @@ make the python file excecutable by :
 chmod + x traceroute.py 
 takes for command line parameters 
 
-- --domains Specify a domain or a list orf domains
+- --domains &nbsp;Specify a domain or a list orf domains
 - --day &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Specify that you want traceroute to occur every day
 - --hr &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Specify that you want traceroute to occur every hour
 - --min &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Specify that you want traceroute to occur every min

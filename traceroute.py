@@ -97,19 +97,32 @@ def get_trace_route(command, domain):
     ip_p = "((([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5])[ (\[]?(\.|dot)[ )\]]?){3}([01]?[0-9]?[0-9]|2[0-4][0-9]|25[0-5]))"
     time_pattern = "\d+\sms"
     hops_p = "\d[\s]{2,}"
+    no_resp_p = "\*"
     hops = 0
     ip_list = list()
     avg_ttl = list()
+    hops_counter = 0
     for line in lines:
         if line:
             if len([match[0] for match in re.findall(hops_p, line)]) > 0:
                 ip = [match[0] for match in re.findall(ip_p, line)]
                 if len(ip) > 0 and ip != '*':
                     ip_list.append(ip[0])
+                else:
+                    ip_list.append('*')
+                    print("Added fake ip")
                 times = re.findall(time_pattern, line)
                 if len(times) > 0:
                     avg_ttl.append(times[0].rstrip('ms'))
-                hops += 1
+                    hops_counter += len(times)
+                unresp = re.findall(no_resp_p, line)
+
+                if len(unresp) > 0:
+                    print("Find unresponsive")
+                    hops_counter += len(unresp)
+                if hops_counter == 3:
+                    hops_counter = 0
+                    hops += 1
 
     content['ips'] = ip_list
     content['times'] = avg_ttl
@@ -141,5 +154,15 @@ def write_data_to_csv(file_name: str):
     return
 
 
+def test():
+    line = "12 * * *      unresponsive"
+    no_resp_p = "\*"
+    no_resp = re.findall(no_resp_p, line)
+    if no_resp:
+        print("Found {}".format(len(no_resp)))
+
+
 if __name__ == '__main__':
     main()
+    #test()
+
