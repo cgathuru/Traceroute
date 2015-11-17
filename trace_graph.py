@@ -88,7 +88,7 @@ def main():
 
     # print(graphs[0].source)
     # for num, graph in enumerate(graphs):
-       # render_graph(graph, num)
+    # render_graph(graph, num)
     build_graphs(domain_set=time_set1, filename_suffix='set_1')
     build_graphs(domain_set=time_set2, filename_suffix='set_2')
 
