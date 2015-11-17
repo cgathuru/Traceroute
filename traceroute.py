@@ -101,15 +101,15 @@ def get_trace_route(command, domain):
     hops = 0
     ip_list = list()
     avg_ttl = list()
-    hops_counter = 0
+    hops_counter = 1
     for line in lines:
         if line:
             if len([match[0] for match in re.findall(hops_p, line)]) > 0:
                 ip = [match[0] for match in re.findall(ip_p, line)]
                 if len(ip) > 0 and ip != '*':
-                    ip_list.append(ip[0])
+                    ip_list.append(ip[0]+":{}".format(hops + 1))
                 else:
-                    ip_list.append('*')
+                    ip_list.append('*:{}'.format(hops + 1))
                     print("Added fake ip")
                 times = re.findall(time_pattern, line)
                 if len(times) > 0:
@@ -118,9 +118,9 @@ def get_trace_route(command, domain):
                 unresp = re.findall(no_resp_p, line)
 
                 if len(unresp) > 0:
-                    print("Find unresponsive")
+                    print("Found unresponsive node")
                     hops_counter += len(unresp)
-                if hops_counter == 3:
+                if hops_counter >= 3:  # just in case the ip also return *
                     hops_counter = 0
                     hops += 1
 
