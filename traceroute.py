@@ -11,7 +11,6 @@ from statistics import mean
 __author__ = 'Charles'
 
 traces = list()
-rtts = list()
 lock = threading.Lock()
 
 
@@ -52,11 +51,11 @@ def main():
 
     print('command is ' + command)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=(5*len(domains)*2)) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(domains)*3) as executor:
         for _ in range(0, args.rep):
             for domain in domains:
-                executor.submit(get_trace_route, command, domain)
-                executor.submit(get_ping_time, domain)
+                future_trace = executor.submit(get_trace_route, command, domain, executor)
+                traces.append(future_trace.result())
             time.sleep(seconds)
         executor.shutdown(wait=True)
 
@@ -79,18 +78,24 @@ def get_ping_time(domain):
             times.append(matches.group(1))
     if times:
         ttl = mean(list(map(float, times)))
+    if ttl == -1:
+        with open("error.txt", 'a') as file:
+            file.writelines(str(output))
     ttl = float(format(ttl, '.2f'))
-    lock.acquire()
-    rtts.append(ttl)
-    lock.release()
+    # lock.acquire()
+    # rtts.append(ttl)
+    # lock.release()
     print("Average rtt:  {}".format(ttl))
+    return ttl
 
 
-def get_trace_route(command, domain):
+def get_trace_route(command, domain, excecutor):
     content = dict()
     content['domain'] = domain
     content['date'] = time.strftime("%x")
     content['time'] = time.strftime("%X")
+    future = excecutor.submit(get_ping_time, domain)
+    content['avg_rtt'] = future.result()
     output = subprocess.check_output([command, domain])
     decode_out = output.decode("utf-8")
     lines = decode_out.split('\n')
@@ -102,6 +107,7 @@ def get_trace_route(command, domain):
     ip_list = list()
     avg_ttl = list()
     hops_counter = 1
+    unresponsive = 0
     for line in lines:
         if line:
             if len([match[0] for match in re.findall(hops_p, line)]) > 0:
@@ -111,6 +117,7 @@ def get_trace_route(command, domain):
                 else:
                     ip_list.append('*:{}'.format(hops + 1))
                     print("Added fake ip")
+                    unresponsive += 1
                 times = re.findall(time_pattern, line)
                 if len(times) > 0:
                     avg_ttl.append(times[0].rstrip('ms'))
@@ -127,27 +134,27 @@ def get_trace_route(command, domain):
     content['ips'] = ip_list
     content['times'] = avg_ttl
     content['hops'] = hops
-    content['unresponsive'] = hops - len(avg_ttl)
+    content['unresponsive'] = unresponsive
     content['end_time'] = time.strftime("%X")
-    lock.acquire()
-    traces.append(content)
-    lock.release()
-    return
+
+    # lock.acquire()
+    # traces.append(content)
+    # lock.release()
+    print("Returning content")
+    return content
 
 
 def write_data_to_csv(file_name: str):
     with open(file_name + '.csv', 'w', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
-        writer.writerow(['Route Number', 'Date', 'Time', 'End Time', 'Destination', 'Route', 'Route TTL', 'Num Hops',
+        writer.writerow(['Route Number', 'Date', 'Time', 'End Time', 'Destination', 'Route', 'Route RTT', 'Num Hops',
                          'Unresponsive', 'Average RTT'])
         for route_no, route in enumerate(traces, start=1):
             route_ttls = route.get('times')
             ip_list = route.get('ips')
             hops = route.get('hops')
             domain = route.get('domain')
-            if len(rtts) < len(traces):
-                rtts.insert(route_no-1, -1)  # Ping probably failed
-            avg_rtt = rtts[route_no-1]
+            avg_rtt = route.get('avg_rtt')
 
             writer.writerow([route_no, route.get('date'), route.get('time'), route.get('end_time'), domain,
                              ', '.join(ip_list), ', '.join(route_ttls), hops, route.get('unresponsive'), avg_rtt])
