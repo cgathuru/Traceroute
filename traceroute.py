@@ -51,7 +51,7 @@ def main():
 
     print('command is ' + command)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(domains)*3) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=(5*len(domains)*2)) as executor:
         for _ in range(0, args.rep):
             for domain in domains:
                 future_trace = executor.submit(get_trace_route, command, domain, executor)
