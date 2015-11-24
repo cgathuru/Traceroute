@@ -67,7 +67,11 @@ def get_ping_time(domain):
     command = 'ping -n {} {}'.format(num_pkts, domain)
     if platform.system() != 'Windows':
         command = 'ping -c {} {}'.format(num_pkts, domain)
-    output = subprocess.check_output(command, shell=True)
+    try:
+        output = subprocess.check_output(command, shell=True)
+    except subprocess.CalledProcessError:
+        print("ping error. Destination {} may be unreachable".format(domain))
+        return -1
     decode_out = output.decode("utf-8")
     lines = decode_out.split('\n')
     ttl = -1
