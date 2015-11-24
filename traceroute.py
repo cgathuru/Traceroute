@@ -99,7 +99,6 @@ def get_trace_route(command, domain, excecutor):
     content['date'] = time.strftime("%x")
     content['time'] = time.strftime("%X")
     future = excecutor.submit(get_ping_time, domain)
-    content['avg_rtt'] = future.result()
     output = subprocess.check_output([command, domain])
     decode_out = output.decode("utf-8")
     lines = decode_out.split('\n')
@@ -140,7 +139,7 @@ def get_trace_route(command, domain, excecutor):
     content['hops'] = hops
     content['unresponsive'] = unresponsive
     content['end_time'] = time.strftime("%X")
-
+    content['avg_rtt'] = future.result()
     # lock.acquire()
     # traces.append(content)
     # lock.release()
