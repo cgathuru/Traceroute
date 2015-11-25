@@ -54,8 +54,7 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=(5*len(domains)*2)) as executor:
         for _ in range(0, args.rep):
             for domain in domains:
-                future_trace = executor.submit(get_trace_route, command, domain, executor)
-                traces.append(future_trace.result())
+                executor.submit(get_trace_route, command, domain, executor)
             time.sleep(seconds)
         executor.shutdown(wait=True)
 
@@ -93,12 +92,12 @@ def get_ping_time(domain):
     return ttl
 
 
-def get_trace_route(command, domain, excecutor):
+def get_trace_route(command, domain, executor):
     content = dict()
     content['domain'] = domain
+    future = executor.submit(get_ping_time, domain)
     content['date'] = time.strftime("%x")
     content['time'] = time.strftime("%X")
-    future = excecutor.submit(get_ping_time, domain)
     output = subprocess.check_output([command, domain])
     decode_out = output.decode("utf-8")
     lines = decode_out.split('\n')
@@ -140,9 +139,9 @@ def get_trace_route(command, domain, excecutor):
     content['unresponsive'] = unresponsive
     content['end_time'] = time.strftime("%X")
     content['avg_rtt'] = future.result()
-    # lock.acquire()
-    # traces.append(content)
-    # lock.release()
+    lock.acquire()
+    traces.append(content)
+    lock.release()
     print("Returning content")
     return content
 
